@@ -1,0 +1,30 @@
+spring:
+  profiles:
+    active: inmemory
+
+---
+spring:
+  config:
+    activate:
+      on-profile: inmemory
+
+logging:
+  level:
+    root: DEBUG
+    org.springframework: INFO
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.data.redis: DEBUG
