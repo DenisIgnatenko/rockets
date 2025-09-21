@@ -197,7 +197,7 @@ cd rockets
 ### 5. How to Run Frontend
 Local Dev (Vite)
 ```
-cd rockets-frontend
+cd rockets-dashboard
 npm install
 npm run dev
 ```
