@@ -68,9 +68,7 @@ In hashmap keys are unsorted, harder to search for next.
 In ArrayList if we receive messageNumber 1000, we will have to create list with 1001
 elements (999 empty) - uneffective by memory and time.
 
-Treemap - good choice.
-
-I started to use NavigableMap (instance by TreeMap) to guarantee sorted event buffering.
+Treemap -  good choice. I started to use NavigableMap (instance by TreeMap) to guarantee sorted event buffering.
 Even though we currently only apply strictly sequential events (lastApplied+1), this
 design allows easy extension to handle missing or out-of-order events using methods 
 like higherKey and lowerKey.
