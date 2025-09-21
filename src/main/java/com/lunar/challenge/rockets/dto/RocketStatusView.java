@@ -1,22 +1,25 @@
 package com.lunar.challenge.rockets.dto;
 
+import com.lunar.challenge.rockets.domain.event.AppliedEvent;
 import lombok.Builder;
-import lombok.Value;
+import lombok.Getter;
+import lombok.ToString;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 /**
- * DTO for API responses
- *
- * @Value makes DTO immutableXnj
+ * View model for rocket status (exposed to API).
  */
-@Value
+@Getter
 @Builder
+@ToString
 public class RocketStatusView {
-    String channel;
-    String type;
-    int speed;
-    String mission;
-    boolean exploded;
-    OffsetDateTime lastMessageTime;
+    private final String channel;
+    private final String type;
+    private final int speed;
+    private final String mission;
+    private final boolean exploded;
+    private final OffsetDateTime lastMessageTime;
+    private List<AppliedEvent> history;
 }

@@ -5,6 +5,6 @@ package com.lunar.challenge.rockets.exception;
  */
 public class RocketNotFoundException extends RuntimeException {
     public RocketNotFoundException(String channel) {
-        super("Rocket with channel " + channel + " not found");
+        super("Rocket not found: " + channel);
     }
 }

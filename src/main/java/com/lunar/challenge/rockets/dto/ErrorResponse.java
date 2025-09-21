@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Value;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Value
 @Builder
@@ -19,4 +20,8 @@ public class ErrorResponse {
 
     @Schema(description = "Timestamp of the error", example = "2025-09-19T15:40:00Z")
     OffsetDateTime timestamp;
+
+    @Schema(description = "List of validation or detailed error messages",
+            example = "[\"channel must not be null\", \"messageNumber must be greater than 0\"] etc")
+    List<String> errors;
 }

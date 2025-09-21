@@ -34,15 +34,17 @@ public class MessagesController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Message processed successfully"),
+            @ApiResponse(responseCode = "400", description = "Validation error",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "500", description = "Internal server error",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<Void> receiveMessage(@RequestBody RocketMessage message) {
         log.debug("Received message for channel {}, type {}",
                 message.getMetadata().getChannel(),
-                message.getMetadata());
+                message.getMetadata().getMessageType());
 
-        service.handleMessage(message.getMetadata(), message.getMessage());
+        service.handleMessage(message.getMetadata(), message.getPayload());
 
         return ResponseEntity.ok().build();
     }

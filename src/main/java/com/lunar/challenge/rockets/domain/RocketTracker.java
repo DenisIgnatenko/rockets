@@ -1,11 +1,14 @@
 package com.lunar.challenge.rockets.domain;
 
-
-import com.fasterxml.jackson.databind.JsonNode;
+import com.lunar.challenge.rockets.domain.event.*;
+import com.lunar.challenge.rockets.dto.RocketHistoryItem;
+import com.lunar.challenge.rockets.dto.RocketSnapshotDTO;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -20,6 +23,7 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 public class RocketTracker {
     private final ReentrantLock lock = new ReentrantLock();
+    private final List<AppliedEvent> appliedEvents = new ArrayList<>();
 
     @Getter
     private final RocketStatus status;
@@ -34,10 +38,9 @@ public class RocketTracker {
 
     //creating immutable DTO for temporarily store pending messages
     // + concurrency support: once created - opened only for read
-    private record PendingMessage(int messageNumber,
-                                  OffsetDateTime time,
-                                  MessageType type,
-                                  JsonNode payload
+    private record PendingEvent(int messageNumber,
+                                OffsetDateTime time,
+                                RocketEvent event
     ) {
     }
 
@@ -48,33 +51,33 @@ public class RocketTracker {
     //- uneffective by memory and time.
     //Treemap - good choise.
     //NavigableMap is a handy TreeMap interface adding navi methods - higherKey, lowerKey
-    private final NavigableMap<Integer, PendingMessage> buffer = new TreeMap<>();
+    private final NavigableMap<Integer, PendingEvent> buffer = new TreeMap<>();
 
     public RocketTracker(String channel) {
         this.status = new RocketStatus(channel);
         log.info("Created new tracker for channel {}", channel);
     }
 
-    /**
-     * Current rocket status snapshot
-     */
     public RocketStatus snapshot() {
         return status;
+    }
+
+    public List<AppliedEvent> getHistory() {
+        return List.copyOf(appliedEvents);
     }
 
     /**
      * Put new message in buffer and apply if it is next by order
      */
-    public void stageAndApply(int messageNumber, OffsetDateTime time, MessageType type, JsonNode payload) {
+    public void stageAndApply(int messageNumber, OffsetDateTime time, MessageType type, RocketEvent event) {
         lock.lock();
         try {
             if (messageNumber <= lastApplied) {
                 log.warn("Ignored duplicate/old message: channel {}, number {}", status.getChannel(), messageNumber);
                 return;
             }
-            buffer.put(messageNumber, new PendingMessage(messageNumber, time, type, payload));
+            buffer.put(messageNumber, new PendingEvent(messageNumber, time, event));
             log.debug("Buffered message: channel {}, number {}, type {}", status.getChannel(), messageNumber, type);
-
             applyPendingInOrder();
         } finally {
             lock.unlock();
@@ -84,104 +87,99 @@ public class RocketTracker {
     /**
      * applies current rocket state on a new message.
      */
-    private void apply(PendingMessage pendingMessage) {
-        if (status.isExploded() && pendingMessage.type != MessageType.RocketExploded) {
-            log.warn("Ignored message for exploded rocket: channel {}, number {}, type {}",
-                    status.getChannel(), pendingMessage.messageNumber(), pendingMessage.type());
-
+    private void apply(PendingEvent pending) {
+        if (status.isExploded() && !(pending.event instanceof RocketExploded)) {
+            log.warn("Ignored event for exploded rocket: channel {}, number {}, type {}",
+                    status.getChannel(), pending.messageNumber, pending.event().getClass().getSimpleName());
             return;
         }
 
-        switch (pendingMessage.type) {
-            case RocketLaunched -> {
-                status.setType(safeGetText(
-                        pendingMessage.payload,
-                        RocketMessageFields.TYPE,
-                        status.getType()));
-
-                status.setSpeed(safeGetInt(
-                        pendingMessage.payload,
-                        RocketMessageFields.LAUNCH_SPEED,
-                        status.getSpeed()));
-
-                status.setMission(safeGetText(
-                        pendingMessage.payload,
-                        RocketMessageFields.MISSION,
-                        status.getMission()));
-
-                status.setLastMessageTime(pendingMessage.time());
-
-                log.info("Rocket launched: channel {}, type {}, mission {}, speed {}",
-                        status.getChannel(), status.getType(), status.getMission(), status.getSpeed());
-
-            }
-            case RocketSpeedIncreased -> {
-                int by = safeGetInt(
-                        pendingMessage.payload,
-                        RocketMessageFields.BY,
-                        0);
-
-                status.setSpeed(status.getSpeed() + by);
-                status.setLastMessageTime(pendingMessage.time);
-
-                log.debug("Speed increased: channel {}, by {}, newSpeed {}", status.getChannel(), by, status.getSpeed());
-
-            }
-            case RocketSpeedDecreased -> {
-                int by = safeGetInt(
-                        pendingMessage.payload,
-                        RocketMessageFields.BY,
-                        0);
-
-                status.setSpeed(Math.max(0, status.getSpeed() - by));
-                status.setLastMessageTime(pendingMessage.time);
-                log.debug("Speed decreased: channel {}, by {}, newSpeed {}", status.getChannel(), by, status.getSpeed());
-
-            }
-            case RocketMissionChanged -> {
-                status.setMission(safeGetText(
-                        pendingMessage.payload,
-                        RocketMessageFields.NEW_MISSION,
-                        status.getMission()));
-
-                status.setLastMessageTime(pendingMessage.time);
-                log.info("Mission changed: channel {}, newMission {}", status.getChannel(), status.getMission());
-
-            }
-            case RocketExploded -> {
-                status.setExploded(true);
-                status.setLastMessageTime(pendingMessage.time);
-                log.error("Rocket exploded: channel {}", status.getChannel());
-
-            }
+        RocketEvent event = pending.event();
+        if (event instanceof RocketLaunched(String type, String mission, int initialSpeed)) {
+            status.setType(type);
+            status.setMission(mission);
+            status.setSpeed(initialSpeed);
+            status.setLastMessageTime(pending.time());
+            log.info("Rocket launched: channel {}, type {}, mission {}, speed {}",
+                    status.getChannel(), type, mission, initialSpeed);
+        } else if (event instanceof RocketMissionChanged(String newMission)) {
+            status.setMission(newMission);
+            status.setLastMessageTime(pending.time());
+            log.info("Mission changed: channel {}, newMission {}", status.getChannel(), newMission);
+        } else if (event instanceof RocketExploded) {
+            status.setExploded(true);
+            status.setLastMessageTime(pending.time());
+            log.error("Rocket exploded: channel {}", status.getChannel());
+        } else if (event instanceof RocketSpeedIncreased(int delta)) {
+            status.setSpeed(status.getSpeed() + delta);
+            status.setLastMessageTime(pending.time());
+            log.debug("Speed increased: channel {}, by {}, newSpeed {}",
+                    status.getChannel(), delta, status.getSpeed());
+        } else if (event instanceof RocketSpeedDecreased(int delta)) {
+            status.setSpeed(status.getSpeed() - delta);
+            status.setLastMessageTime(pending.time());
+            log.debug("Speed decreased: channel {}, by {}, newSpeed {}",
+                    status.getChannel(), delta, status.getSpeed());
         }
+
+        status.setLastMessageTime(pending.time());
+        appliedEvents.add(new AppliedEvent(
+                pending.time,
+                MessageType.valueOf(event.getClass().getSimpleName()), // фикс
+                status.getSpeed()
+        ));
     }
 
     /**
      * applies all messages that are in order in buffer. Stops if there is a gap in message numbers.
      */
-    public void applyPendingInOrder() {
+    private void applyPendingInOrder() {
         while (true) {
-            PendingMessage next = buffer.get(lastApplied + 1);
+            PendingEvent next = buffer.get(lastApplied + 1);
             if (next == null) break;
             apply(next);
-            lastApplied = next.messageNumber;
-            buffer.remove(next.messageNumber);
+            lastApplied = next.messageNumber();
+            buffer.remove(next.messageNumber());
         }
     }
 
-
-    /**
-     * helpers to read JSON safely
-     */
-    private static String safeGetText(JsonNode node, String field, String def) {
-        JsonNode value = node.get(field);
-        return value != null && value.isTextual() ? value.asText() : def;
+    public RocketSnapshotDTO toSnapshot() {
+        return RocketSnapshotDTO.builder()
+                .channel(status.getChannel())
+                .type(status.getType())
+                .mission(status.getMission())
+                .speed(status.getSpeed())
+                .exploded(status.isExploded())
+                .lastMessageTime(status.getLastMessageTime())
+                .history(appliedEvents.stream()
+                        .map(event -> RocketHistoryItem.builder()
+                                .time(event.time())
+                                .type(event.type().name())
+                                .speedAfter(event.speedAfter())
+                                .build())
+                        .toList())
+                .build();
     }
 
-    private static int safeGetInt(JsonNode node, String field, int def) {
-        JsonNode value = node.get(field);
-        return value != null && value.isNumber() ? value.asInt() : def;
-    }
+    public void restoreFromSnapshot(RocketSnapshotDTO dto) {
+        status.setType(dto.getType());
+        status.setMission(dto.getMission());
+        status.setSpeed(dto.getSpeed());
+        status.setExploded(dto.isExploded());
+        status.setLastMessageTime(dto.getLastMessageTime());
 
+        appliedEvents.clear();
+        if (dto.getHistory() != null) {
+            dto.getHistory().forEach(history -> appliedEvents.add(
+                    new AppliedEvent(
+                            history.getTime(),
+                            MessageType.valueOf(history.getType()),
+                            history.getSpeedAfter()
+                    )
+            ));
+            lastApplied = dto.getHistory().size();
+        } else {
+            lastApplied = 0;
+        }
+    }
 }

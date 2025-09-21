@@ -40,6 +40,7 @@ public class RocketsController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<RocketStatusView> getRocket(@PathVariable String channel) {
+        log.info("Fetching rocket with channel {}", channel);
         return ResponseEntity.ok(service.getRocket(channel));
     }
 
@@ -54,6 +55,7 @@ public class RocketsController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<List<RocketStatusView>> getAllRockets() {
+        log.info("Fetching all rockets");
         return ResponseEntity.ok(service.getAllRockets());
     }
 
