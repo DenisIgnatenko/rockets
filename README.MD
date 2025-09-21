@@ -59,19 +59,17 @@ This ensures no race conditions even with concurrent messages incoming.
 ---
 
 ### TreeMap
+
 Used for buffering out-of-order messages (key = `messageNumber`).
 
 I need the structure that can store entries sorted by the messageNumber (key). 
 
 In hashmap keys are unsorted, harder to search for next.
 
-In ArrayList if we receive messageNumber 1000, we will have to create list with 1001
-elements (999 empty) - uneffective by memory and time.
+In ArrayList if we receive messageNumber 1000, we will have to create list with 1001 elements (999 empty) - uneffective by memory and time.
 
-Treemap -  good choice. I started to use NavigableMap (instance by TreeMap) to guarantee sorted event buffering.
-Even though we currently only apply strictly sequential events (lastApplied+1), this
-design allows easy extension to handle missing or out-of-order events using methods 
-like higherKey and lowerKey.
+Treemap  good choice. I started to use NavigableMap (instance by TreeMap) to guarantee sorted event buffering. Even though we currently only apply strictly sequential events (lastApplied+1), this design allows easy extension to handle missing or out-of-order events using methods like higherKey and lowerKey.
+
 ---
 
 ### Why this combination (ReentrantLock + TreeMap)?
