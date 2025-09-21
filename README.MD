@@ -91,6 +91,58 @@ like higherKey and lowerKey.
 - Frontend consumes REST APIs & visualizes rocket states.
 - containerized + CI/CD pipeline.
 
+## Testing
+
+The project includes several tests:
+
+### 1. Unit tests
+- Located under `src/test/java/..`
+- Validate domain logic (e.g. event ordering, state transitions in `RocketTracker`).
+### 2. Integration tests
+   •	Test the full Spring Boot context (controllers, services, repositories).
+   •	Redis-backed tests use @SpringBootTest with embedded Redis.
+   •	Ensure that REST APIs and persistence work correctly together.
+### 3. Performance tests
+   •	Located in a separate folder (performance_test).
+   •	Stress-test concurrency and ordering guarantees.
+   •	Simulate high message throughput and measures system stability 
+
+#### Install k6:
+On macOS (Homebrew):
+```
+brew install k6
+```
+On Linux:
+```
+sudo apt update
+sudo apt install -y gnupg software-properties-common
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5A6A26E6A26B1E7
+echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+sudo apt update
+sudo apt install -y k6
+```
+On Windows (via Chocolatey - sorry was not able to test!):
+```
+choco install k6
+```
+Run
+```
+cd rocket
+k6 run performance_test/load-test.js
+```
+
+### CI/CD
+All tests run automatically on every push to main via GitHub Actions workflow:
+•	build-and-test job: compiles + runs unit & integration tests.
+•	docker job: builds and pushes Docker images only if tests pass.
+This ensures that only verified builds are deployed to Docker Hub.
+
+- Run with:
+  ```bash
+  ./gradlew test
+
+---
+
 ##  How to Run
 
 ### 1.  Run Backend & Dashboard with Docker Compose
