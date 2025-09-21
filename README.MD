@@ -36,7 +36,7 @@ Benefits:
 
 This is not a classic Spring MVC app.  
 I tried to make layered architecture with DDD: 
-` controller (web layer) -> service (application layer) -> repository (persistence layer) -> storage (Redis or InMemory)`
+`controller (web layer) -> service (application layer) -> repository (persistence layer) -> storage (Redis or InMemory)`
 - Controller only receives REST calls.
 - Service orchestrates domain logic & persistence.
 - Repository abstracts Redis/InMemory storage.
@@ -95,13 +95,13 @@ The project includes several tests:
 - Located under `src/test/java/..`
 - Validate domain logic (e.g. event ordering, state transitions in `RocketTracker`).
 ### 2. Integration tests
-   •	Test the full Spring Boot context (controllers, services, repositories).
-   •	Redis-backed tests use @SpringBootTest with embedded Redis.
-   •	Ensure that REST APIs and persistence work correctly together.
+- Test the full Spring Boot context (controllers, services, repositories). 
+- Redis-backed tests use @SpringBootTest with embedded Redis. 
+- Ensure that REST APIs and persistence work correctly together.
 ### 3. Performance tests
-   •	Located in a separate folder (performance_test).
-   •	Stress-test concurrency and ordering guarantees.
-   •	Simulate high message throughput and measures system stability 
+- Located in a separate folder (performance_test).
+- Stress-test concurrency and ordering guarantees.
+- Simulate high message throughput and measures system stability 
 
 #### Install k6:
 On macOS (Homebrew):
@@ -129,11 +129,11 @@ k6 run performance_test/load-test.js
 
 ### CI/CD
 All tests run automatically on every push to main via GitHub Actions workflow:
-•	build-and-test job: compiles + runs unit & integration tests.
-•	docker job: builds and pushes Docker images only if tests pass.
+-	build-and-test job: compiles + runs unit & integration tests.
+-	docker job: builds and pushes Docker images only if tests pass.
 This ensures that only verified builds are deployed to Docker Hub.
 
-- Run with:
+Run with:
   ```bash
   ./gradlew test
 
