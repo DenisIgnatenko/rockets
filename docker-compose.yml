@@ -1,17 +1,27 @@
 version: "3.9"
 
 services:
-  app:
-    build: .
-    container_name: rockets_app
+  backend:
+    image: iregent/rockets-backend:latest
+    container_name: rockets_backend
     ports:
-      - "8080:8080"
+      - "8088:8088"
     environment:
       - SPRING_PROFILES_ACTIVE=redis
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
       - redis
+
+  frontend:
+    image: iregent/rockets-frontend:latest
+    container_name: rockets_frontend
+    ports:
+      - "8081:80"
+    environment:
+      - API_URL=http://localhost:8088  # важно: фронт будет стучаться в бэк
+    depends_on:
+      - backend
 
   redis:
     image: redis:7.4
