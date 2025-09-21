@@ -43,7 +43,8 @@ public class RocketTracker {
     ) {
     }
 
-    
+
+
     private final NavigableMap<Integer, PendingEvent> buffer = new TreeMap<>();
 
     public RocketTracker(String channel) {

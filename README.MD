@@ -1,13 +1,17 @@
 # Lunar Rockets API & Dashboard
 
-This project simulates rocket telemetry ingestion, processing, and visualization.  
+This project simulates rocket telemetry processing and visualization.  
 It consists of two parts:
 
 - **Backend (Spring Boot + Redis/InMemory)** — processes telemetry events and provides REST APIs.
-- **Frontend (React/Vite Dashboard)** — displays rocket states and history in real time.
+- **Simple dashboard (React/Vite)** — displays rocket states and history.
 
 ---
 
+## Architecture
+![Diagram](src/main/resources/static/Diagram.png)
+
+---
 ## Domain-Driven Design (DDD)
 I modeled the rocket system with root and events:
 
@@ -20,16 +24,15 @@ I modeled the rocket system with root and events:
     - `RocketSpeedDecreased`
     - `RocketExploded`
 
+Benefits:
 - Encapsulates business logic (order of messages, state transitions).
     No one touches `RocketStatus` or buffers directly.
 - Invariants are protected (like no speed change after explosion).
 - Keeps REST/controller/service layers thin.
 - `ReentrantLock` ensuring only one writer per channel.
 -  The root ensures message numbers are applied strictly in sequence.
----
 
-## Architecture
-![Diagram](src/main/resources/static/Diagram.png)
+---
 
 This is not a classic Spring MVC app.  
 I tried to make layered architecture with DDD: 
@@ -56,13 +59,18 @@ This ensures no race conditions even with concurrent messages incoming.
 ---
 
 ### TreeMap
-- Used for buffering out-of-order messages (key = `messageNumber`).
+Used for buffering out-of-order messages (key = `messageNumber`).
+
 I need the structure that can store entries sorted by the messageNumber (key). 
-In hashmap keys are unsorted, harder to search for next 
+
+In hashmap keys are unsorted, harder to search for next.
+
 In ArrayList if we receive messageNumber 1000, we will have to create list with 1001
 elements (999 empty) - uneffective by memory and time.
+
 Treemap - good choice.
-I started to use NavigableMap (backed by TreeMap) to guarantee sorted event buffering.
+
+I started to use NavigableMap (instance by TreeMap) to guarantee sorted event buffering.
 Even though we currently only apply strictly sequential events (lastApplied+1), this
 design allows easy extension to handle missing or out-of-order events using methods 
 like higherKey and lowerKey.
@@ -81,8 +89,8 @@ like higherKey and lowerKey.
 - Concurrency handled by ReentrantLock + TreeMap.
 - Two storage profiles: `inmemory` and `redis`.
 - Frontend consumes REST APIs & visualizes rocket states.
-- containerized + CI/CD pipeline. 
-- 
+- containerized + CI/CD pipeline.
+
 ##  How to Run
 
 ### 1.  Run Backend & Dashboard with Docker Compose
@@ -96,6 +104,8 @@ docker compose up --build
 ### 2. Run with Docker Hub Images (no local build)
 If you don’t want to build locally, pull prebuilt images from Docker Hub:
 ```bash
+git clone https://github.com/DenisIgnatenko/rockets.git
+cd rockets
 docker compose -f docker-compose.hub.yml up
 ```
 Backend http://localhost:8088
@@ -143,3 +153,11 @@ cd rockets-frontend
 npm install
 npm run dev
 ```
+
+### 6. Run generator
+```
+cd rockets
+./rockets launch "http://localhost:8088/messages" --message-delay=500ms --concurrency-level=1
+```
+
+### Thank you!
