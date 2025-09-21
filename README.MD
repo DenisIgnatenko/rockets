@@ -136,7 +136,7 @@ This ensures that only verified builds are deployed to Docker Hub.
 Run with:
   ```bash
   ./gradlew test
-
+```
 ---
 
 ##  How to Run
@@ -156,9 +156,9 @@ git clone https://github.com/DenisIgnatenko/rockets.git
 cd rockets
 docker compose -f docker-compose.hub.yml up
 ```
-Backend http://localhost:8088
-Dashboard http://localhost:8081
-Redis localhost:6379
+- Backend http://localhost:8088
+- Dashboard http://localhost:8081
+- Redis localhost:6379
 
 ### 3. Run backend locally with in-memory Profile (no dependencies)
 Uses internal `ConcurrentHashMap`. Data is lost on restart.
@@ -167,7 +167,7 @@ Uses internal `ConcurrentHashMap`. Data is lost on restart.
 cd rockets
 ./gradlew bootRun --args='--spring.profiles.active=inmemory'
 ```
-Backend → http://localhost:8088
+- Backend: http://localhost:8088
 
 ### 4. Redis Profile (your own Redis)
 ```
