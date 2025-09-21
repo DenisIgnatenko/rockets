@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  backend:
+    image: iregent/rockets-backend:latest
+    container_name: rockets_backend
+    ports:
+      - "8088:8088"
+    environment:
+      - SPRING_PROFILES_ACTIVE=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+
+  frontend:
+    image: iregent/rockets-frontend:latest
+    container_name: rockets_frontend
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+
+  redis:
+    image: redis:7.4
+    container_name: rockets_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

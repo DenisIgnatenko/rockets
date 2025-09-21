@@ -32,25 +32,18 @@ public class RocketTracker {
         return status.getChannel();
     }
 
-    //volatile to guarantee that reading will always be from memory, rather that from
-    //local thread cache
+    //volatile to guarantee that reading will always be from memory, rather that from local thread cache
     private volatile int lastApplied = 0; //last applied message number;
 
     //creating immutable DTO for temporarily store pending messages
-    // + concurrency support: once created - opened only for read
+    //concurrency support: once created - opened only for read
     private record PendingEvent(int messageNumber,
                                 OffsetDateTime time,
                                 RocketEvent event
     ) {
     }
 
-
-    //we need the structure that can store entries sorted by the messageNubmer (key)
-    //in hashmap keys are unsorted, harder to search for next
-    //arraylist if we receive messageNumber 1000, we will have to create list with 1001 elements (999 empty)
-    //- uneffective by memory and time.
-    //Treemap - good choise.
-    //NavigableMap is a handy TreeMap interface adding navi methods - higherKey, lowerKey
+    
     private final NavigableMap<Integer, PendingEvent> buffer = new TreeMap<>();
 
     public RocketTracker(String channel) {
